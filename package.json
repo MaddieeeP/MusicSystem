@@ -1,0 +1,7 @@
+{
+  "name": "com.daydream.musicsystem",
+  "version": "0.0.0",
+  "displayName": "Music System",
+  "description": "Custom music system.",
+  "rootnamespace": "daydream"
+}
