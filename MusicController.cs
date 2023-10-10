@@ -7,17 +7,26 @@ public class MusicController : MonoBehaviour
 {
     [SerializeField] private Sound[] tracks;
 
-    public Sound currentTrack;
+    private List<Sound> currentTracks = new List<Sound>();
+    public Sound currentTrack 
+    { 
+        get 
+        { 
+            if (currentTracks.Count == 0)
+                return null;
 
-    public AudioSource musicSource;
+            return currentTracks[0]; 
+        } 
+    }
+
+    public AudioSource musicSourceA;
+    public AudioSource musicSourceB;
+
+    public float volume;
 
     private float trackChangeCooldownLength = 0.5f;
     private float trackChangeCooldown = 10f;
-
-    void Start()
-    {
-        Play("boss1");
-    }
+    private bool sourceB = false;
 
     public Sound GetTrack(string name)
     {
@@ -26,9 +35,12 @@ public class MusicController : MonoBehaviour
 
     public void Play(string name)
     {
-        if (name == currentTrack.name)
+        if (currentTracks.Count > 0)
         {
-            return;
+            if (name == currentTrack.name)
+            {
+                return;
+            }
         }
 
         Sound track = GetTrack(name);
@@ -38,8 +50,7 @@ public class MusicController : MonoBehaviour
             return;
         }
 
-        track.Reset();
-        currentTrack = track;
+        currentTracks.Insert(0, track); //FIX
         trackChangeCooldown = trackChangeCooldownLength;
 
         StopAllCoroutines();
@@ -48,7 +59,7 @@ public class MusicController : MonoBehaviour
 
     public void ForceNextSection()
     {
-        if (currentTrack == null)
+        if (currentTracks.Count == 0)
         {
             return;
         }
@@ -57,7 +68,8 @@ public class MusicController : MonoBehaviour
 
         if (!currentTrack.NextSection())
         {
-            currentTrack = null;
+            currentTracks.Remove(currentTrack);
+            musicSource.Stop();
             return;
         }
 
@@ -78,7 +90,7 @@ public class MusicController : MonoBehaviour
             yield return new WaitForSeconds(currentTrack.clip.length);
             if (!currentTrack.NextSection())
             {
-                currentTrack = null;
+                currentTracks.Remove(currentTrack);
                 yield break;
             }
         }

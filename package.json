@@ -3,5 +3,8 @@
   "version": "0.0.0",
   "displayName": "Music System",
   "description": "Custom music system.",
-  "rootnamespace": "daydream"
+  "rootnamespace": "daydream",
+  "dependencies": {
+    "com.daydream.extensionmethods": "0.0.0"
+  }
 }
