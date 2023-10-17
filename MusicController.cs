@@ -69,7 +69,7 @@ public class MusicController : MonoBehaviour
         if (!currentTrack.NextSection())
         {
             currentTracks.Remove(currentTrack);
-            musicSource.Stop();
+            musicSourceA.Stop();
             return;
         }
 
@@ -78,9 +78,9 @@ public class MusicController : MonoBehaviour
 
     IEnumerator PlayTrack()
     {
-        musicSource.clip = currentTrack.clip;
-        musicSource.loop = currentTrack.loop;
-        musicSource.Play();
+        musicSourceA.clip = currentTrack.clip;
+        musicSourceA.loop = currentTrack.loop;
+        musicSourceA.Play();
 
         if (currentTrack.loop)
         {
