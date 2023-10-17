@@ -19,18 +19,49 @@ public class MusicController : MonoBehaviour
         } 
     }
 
-    public AudioSource musicSourceA;
-    public AudioSource musicSourceB;
+    [SerializeField] private AudioSource musicSourceA;
+    [SerializeField] private AudioSource musicSourceB;
+
+    private bool sourceIsA = true;
+
+    public AudioSource previousMusicSource
+    {
+        get
+        {
+            if (sourceIsA)
+            {
+                return musicSourceB;
+            }
+            return musicSourceA;
+        }
+    }
+    public AudioSource currentMusicSource
+    {
+        get
+        {
+            if (sourceIsA)
+            {
+                return musicSourceA;
+            }
+            return musicSourceB;
+        }
+    }
+
+    private bool paused = false;
 
     public float volume;
 
     private float trackChangeCooldownLength = 0.5f;
     private float trackChangeCooldown = 10f;
-    private bool sourceB = false;
 
     public Sound GetTrack(string name)
     {
         return Array.Find(tracks, x => x.name == name);
+    }
+
+    public void Pause()
+    {
+        paused = true;
     }
 
     public void Play(string name)
@@ -50,11 +81,11 @@ public class MusicController : MonoBehaviour
             return;
         }
 
-        currentTracks.Insert(0, track); //FIX
+        currentTracks.Insert(0, track); //FIX - find if already in list
         trackChangeCooldown = trackChangeCooldownLength;
 
         StopAllCoroutines();
-        StartCoroutine(PlayTrack());
+        StartCoroutine(PlayTrack(currentMusicSource, currentTrack));
     }
 
     public void ForceNextSection()
@@ -64,37 +95,43 @@ public class MusicController : MonoBehaviour
             return;
         }
 
-        StopAllCoroutines();
-
         if (!currentTrack.NextSection())
         {
             currentTracks.Remove(currentTrack);
-            musicSource.Stop();
+            currentMusicSource.Stop(); //Fade
+            sourceIsA = !sourceIsA;
             return;
         }
 
-        StartCoroutine(PlayTrack());
+        StartCoroutine(PlayTrack(currentMusicSource, currentTrack));
     }
 
-    IEnumerator PlayTrack()
+    IEnumerator PlayTrack(AudioSource source, Sound track)
     {
-        musicSource.clip = currentTrack.clip;
-        musicSource.loop = currentTrack.loop;
-        musicSource.Play();
+        source.clip = track.clip;
+        source.loop = track.loop;
+        source.Play();
 
-        if (currentTrack.loop)
+        //yield return new WaitForSeconds(track.clip.length);
+        while (paused || source.isPlaying)
         {
-            yield break;
-        } else
+            if (source != currentMusicSource && !paused && source.volume == 0f) //Fade transition ended
+            {
+                source.Stop();
+                yield break;
+            }
+            yield return null;
+        }
+
+        if (!track.loop)
         {
-            yield return new WaitForSeconds(currentTrack.clip.length);
             if (!currentTrack.NextSection())
             {
-                currentTracks.Remove(currentTrack);
+                currentTracks.Remove(track);
                 yield break;
             }
         }
 
-        StartCoroutine(PlayTrack());
+        StartCoroutine(PlayTrack(source, track));
     }
 }
