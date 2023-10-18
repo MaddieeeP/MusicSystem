@@ -29,6 +29,11 @@ public class Sound
         return true;
     }
 
+    public void SetSection(int section)
+    {
+        _currentSection = Math.Clamp(section, 0, sections.Count - 1);
+    }
+
     public void Reset()
     {
         _currentSection = 0;

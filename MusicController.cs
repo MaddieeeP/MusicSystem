@@ -24,17 +24,6 @@ public class MusicController : MonoBehaviour
 
     private bool sourceIsA = true;
 
-    public AudioSource previousMusicSource
-    {
-        get
-        {
-            if (sourceIsA)
-            {
-                return musicSourceB;
-            }
-            return musicSourceA;
-        }
-    }
     public AudioSource currentMusicSource
     {
         get
@@ -46,17 +35,78 @@ public class MusicController : MonoBehaviour
             return musicSourceB;
         }
     }
+    public AudioSource previousMusicSource
+    {
+        get
+        {
+            if (sourceIsA)
+            {
+                return musicSourceB;
+            }
+            return musicSourceA;
+        }
+    }
 
     private bool paused = false;
 
-    public float volume;
+    private float targetVolumeA = 1f;
+    private float targetVolumeB = 0f;
 
-    private float trackChangeCooldownLength = 0.5f;
-    private float trackChangeCooldown = 10f;
+    public float currentTargetVolume
+    {
+        get
+        {
+            if (sourceIsA)
+            {
+                return targetVolumeA;
+            }
+            return targetVolumeB;
+        }
+        private set 
+        {
+            if (sourceIsA)
+            {
+                targetVolumeA = value;
+                return;
+            }
+            targetVolumeB = value;
+        }
+    }
+    public float previousTargetVolume
+    {
+        get
+        {
+            if (sourceIsA)
+            {
+                return targetVolumeB;
+            }
+            return targetVolumeA;
+        }
+        private set
+        {
+            if (sourceIsA)
+            {
+                targetVolumeB = value;
+                return;
+            }
+            targetVolumeA = value;
+        }
+    }
+
+    public float masterVolume = 1f;
+
+    [SerializeField] private AnimationCurve fadeIn;
+    [SerializeField] private AnimationCurve fadeOut;
 
     public Sound GetTrack(string name)
     {
         return Array.Find(tracks, x => x.name == name);
+    }
+
+    public void Update()
+    {
+        currentMusicSource.volume = currentTargetVolume * masterVolume;
+        previousMusicSource.volume = previousTargetVolume * masterVolume;
     }
 
     public void Pause()
@@ -64,7 +114,7 @@ public class MusicController : MonoBehaviour
         paused = true;
     }
 
-    public void Play(string name)
+    public void Play(string name, bool fadeDown = true, bool fadeUp = true)
     {
         if (currentTracks.Count > 0)
         {
@@ -82,29 +132,64 @@ public class MusicController : MonoBehaviour
         }
 
         currentTracks.Insert(0, track); //FIX - find if already in list
-        trackChangeCooldown = trackChangeCooldownLength;
-
         StopAllCoroutines();
+
+        if (fadeDown)
+        {
+            StartCoroutine(Fade(fadeOut));
+        }
+        sourceIsA = !sourceIsA;
+        if (fadeUp)
+        {
+            StartCoroutine(Fade(fadeIn));
+        }
+
         StartCoroutine(PlayTrack(currentMusicSource, currentTrack));
     }
 
-    public void ForceNextSection()
+    public void ForceSection(int section)
     {
         if (currentTracks.Count == 0)
         {
             return;
         }
 
+        currentTrack.SetSection(section);
+
+        StopAllCoroutines();
+        StartCoroutine(PlayTrack(currentMusicSource, currentTrack));
+    }
+
+    public void ForceNextSection(bool endIfNone, bool fade = false)
+    {
+        if (currentTracks.Count == 0)
+        {
+            return;
+        }
+
+        StopAllCoroutines();
+
         if (!currentTrack.NextSection())
         {
             currentTracks.Remove(currentTrack);
-            currentMusicSource.Stop(); //Fade
-            sourceIsA = !sourceIsA;
+            if (endIfNone)
+            {
+                if (fade)
+                {
+                    StartCoroutine(Fade(fadeOut));
+                }
+                else
+                {
+                    currentMusicSource.Stop();
+                }
+            }
             return;
         }
 
         StartCoroutine(PlayTrack(currentMusicSource, currentTrack));
     }
+
+    public void ForceNextSection() => ForceNextSection(false, false);
 
     IEnumerator PlayTrack(AudioSource source, Sound track)
     {
@@ -112,10 +197,9 @@ public class MusicController : MonoBehaviour
         source.loop = track.loop;
         source.Play();
 
-        //yield return new WaitForSeconds(track.clip.length);
         while (paused || source.isPlaying)
         {
-            if (source != currentMusicSource && !paused && source.volume == 0f) //Fade transition ended
+            if (source != currentMusicSource && !paused && previousTargetVolume == 0f)
             {
                 source.Stop();
                 yield break;
@@ -134,4 +218,38 @@ public class MusicController : MonoBehaviour
 
         StartCoroutine(PlayTrack(source, track));
     }
+
+    IEnumerator Fade(AnimationCurve fadeCurve, bool sourceA)
+    {
+        float timeElapsed = 0f;
+        while (timeElapsed < fadeCurve.length)
+        {
+            timeElapsed = Math.Clamp(timeElapsed + Time.deltaTime, 0f, fadeCurve.length);
+
+            if (sourceA)
+            {
+                targetVolumeA = fadeCurve.Evaluate(timeElapsed);
+            } 
+            else
+            {
+                targetVolumeB = fadeCurve.Evaluate(timeElapsed);
+            }
+
+            yield return null;
+        }
+        if (fadeCurve.Evaluate(timeElapsed) < 0.1f)
+        {
+            if (sourceA)
+            {
+                targetVolumeA = 0f;
+            }
+            else
+            {
+                targetVolumeB = 0f;
+            }
+        }
+    }
+
+    IEnumerator Fade(AnimationCurve fadeCurve) => Fade(fadeCurve, sourceIsA);
+
 }
