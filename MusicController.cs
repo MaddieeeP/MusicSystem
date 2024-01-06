@@ -274,10 +274,7 @@ public class MusicController : MonoBehaviour
         source.loop = track.loop;
         source.Play();
 
-        float length = track.length;
-        float counter = 0f;
-
-        while (counter < length)
+        while (true)
         {
             yield return null;
 
@@ -286,14 +283,15 @@ public class MusicController : MonoBehaviour
                 continue;
             }
 
-            float yieldPause = Time.deltaTime;
-            counter += yieldPause;
-            track.AddTime(yieldPause);
-
             if (source != currentMusicSource && previousTargetVolume == 0f)
             {
                 source.Stop();
                 yield break;
+            }
+
+            if (track.AddTime(Time.deltaTime))
+            {
+                break;
             }
         }
 
@@ -305,11 +303,11 @@ public class MusicController : MonoBehaviour
                 currentTracks.Remove(track);
                 yield break;
             }
+            track.SetTime(0f);
         }
 
         if (source == currentMusicSource)
         {
-            track.SetTime(0f);
             StartCoroutine(PlayTrack(source, track));
         }
     }

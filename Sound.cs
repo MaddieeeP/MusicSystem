@@ -7,22 +7,18 @@ using UnityEngine;
 public class Sound
 {
     [SerializeField] private string _name;
-    public string name { get { return _name; } }
-
     [SerializeField] private List<AudioClip> sections;
-
     [SerializeField] private List<bool> _loopSection;
-    public List<bool> loopSection { get { return _loopSection; } }
-    public bool loop { get { return loopSection[currentSection]; } }
-
-    public AudioClip clip { get { return sections[currentSection]; } }
 
     private int _currentSection = 0;
-    public int currentSection { get { return Math.Clamp(_currentSection, 0, sections.Count - 1); } }
-
     private float _time = 0f;
-    public float time { get { return _time; } }
 
+    public string name { get { return _name; } }
+    public List<bool> loopSection { get { return _loopSection; } }
+    public bool loop { get { return loopSection[currentSection]; } }
+    public AudioClip clip { get { return sections[currentSection]; } }
+    public int currentSection { get { return Math.Clamp(_currentSection, 0, sections.Count - 1); } }
+    public float time { get { return _time; } }
     public float length { get { return clip.length; } }
 
     public bool NextSection()
@@ -37,18 +33,20 @@ public class Sound
         return true;
     }
 
-    public void AddTime(float deltaTime)
+    public bool AddTime(float deltaTime)
     {
         _time += deltaTime;
         while (_time > clip.length)
         {
             _time -= clip.length;
+            return true;
         }
+        return false;
     }
 
     public void SetTime(float timeValue)
     {
-        _time = Math.Clamp(timeValue, 0f, clip.length);
+        _time = Math.Max(timeValue, 0f) % clip.length;
     }
 
     public void SetSection(int section)
